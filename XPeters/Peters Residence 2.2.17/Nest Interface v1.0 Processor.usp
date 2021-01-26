@@ -1,0 +1,1290 @@
+/*******************************************************************************************
+  SIMPL+ Module Information
+  (Fill in comments below)
+*******************************************************************************************/
+/*
+Dealer Name: Crestron Electronics, Inc.
+System Name: Nest Interface v1.0
+System Number:
+Programmer: LP
+Comments:
+*/
+
+/*******************************************************************************************
+  Compiler Directives
+  (Uncomment and declare compiler directives as needed)
+*******************************************************************************************/
+// #ENABLE_DYNAMIC
+#SYMBOL_NAME "Nest Interface v1.0 Processor"
+// #HINT ""
+
+#DEFINE_CONSTANT ciF 1
+#DEFINE_CONSTANT ciC 2
+
+#DEFINE_CONSTANT ciDelay 2
+#DEFINE_CONSTANT ciTokenSuccess 3
+#DEFINE_CONSTANT ciTokenFail 4
+
+#DEFINE_CONSTANT ciYes 1
+#DEFINE_CONSTANT ciNo  2
+
+// #CATEGORY "" 
+// #PRINT_TO_TRACE
+// #DIGITAL_EXPAND 
+// #ANALOG_SERIAL_EXPAND 
+// #OUTPUT_SHIFT 
+// #HELP_PDF_FILE ""
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+// #ENCODING_ASCII
+// #ENCODING_UTF16
+// #ENCODING_INHERIT_FROM_PARENT
+// #ENCODING_INHERIT_FROM_PROGRAM
+/*
+#HELP_BEGIN
+   (add additional lines of help lines)
+#HELP_END
+*/
+
+/*******************************************************************************************
+  Include Libraries
+  (Uncomment and include additional libraries as needed)
+*******************************************************************************************/
+// #CRESTRON_LIBRARY ""
+// #USER_LIBRARY ""
+// #INCLUDEPATH ""
+#USER_SIMPLSHARP_LIBRARY "Nest_Interface_v1_0"
+
+/*******************************************************************************************
+  DIGITAL, ANALOG and SERIAL INPUTS and OUTPUTS
+  (Uncomment and declare inputs and outputs as needed)
+*******************************************************************************************/
+DIGITAL_INPUT Retrieve_Status;
+DIGITAL_INPUT Send;
+DIGITAL_INPUT Home_Away;
+DIGITAL_INPUT Select_Thermostat[10];
+DIGITAL_INPUT Target_Temperature[2];
+DIGITAL_INPUT Target_Temperature_High[2];
+DIGITAL_INPUT Target_Temperature_Low[2];
+DIGITAL_INPUT Select_Structure[2]; 
+STRING_INPUT Code[20];
+STRING_INPUT HVAC_Mode[11];
+STRING_INPUT Away_Mode[11];
+
+STRING_OUTPUT Locale_Text;
+STRING_OUTPUT Temperature_Scale_Text;
+STRING_OUTPUT Software_Version_Text;
+STRING_OUTPUT Device_ID_Text;
+STRING_OUTPUT HVAC_Mode_Text;
+STRING_OUTPUT Target_Temperature_C_Text;
+STRING_OUTPUT Target_Temperature_F_Text;
+STRING_OUTPUT Target_Temperature_High_C_Text;
+STRING_OUTPUT Target_Temperature_High_F_Text;
+STRING_OUTPUT Target_Temperature_Low_C_Text;
+STRING_OUTPUT Target_Temperature_Low_F_Text;
+STRING_OUTPUT Ambient_Temperature_C_Text;
+STRING_OUTPUT Ambient_Temperature_F_Text;
+DIGITAL_OUTPUT Is_Using_Emergency_Heat;
+DIGITAL_OUTPUT Fan_Timer_Is_Active;
+DIGITAL_OUTPUT Has_Fan;
+DIGITAL_OUTPUT Has_Leaf;
+DIGITAL_OUTPUT Is_Online;
+DIGITAL_OUTPUT Is_Offline;
+DIGITAL_OUTPUT Mode_Is_Heat;
+DIGITAL_OUTPUT Mode_Is_Cool;
+DIGITAL_OUTPUT Mode_Is_Heat_Cool;
+DIGITAL_OUTPUT Mode_Is_Off;
+DIGITAL_OUTPUT All_Clear;
+DIGITAL_OUTPUT Please_Try_Later;
+STRING_OUTPUT Please_Try_Later_Text;
+ANALOG_OUTPUT Structure_Selected_Value;
+STRING_OUTPUT Selected_Structure_Text;
+STRING_OUTPUT Selected_Structure_Away_Text;
+ANALOG_OUTPUT Number_Of_Thermostats;
+ANALOG_OUTPUT Number_Of_Structures;
+ANALOG_OUTPUT Thermostat_Selected_Value;
+STRING_OUTPUT Selected_Thermostat_Text;
+DIGITAL_OUTPUT Token_Status;
+STRING_OUTPUT Token_Status_Text;
+STRING_OUTPUT Thermostat_Select_Text[10];
+DIGITAL_OUTPUT Selected_Thermostat[10];
+STRING_OUTPUT Structure_Select_Text[2];
+STRING_OUTPUT Structure_Away_Text[2];
+DIGITAL_OUTPUT Selected_Structure[2];
+
+nest UserClass;
+
+/*******************************************************************************************
+  SOCKETS
+  (Uncomment and define socket definitions as needed)
+*******************************************************************************************/
+// TCP_CLIENT
+// TCP_SERVER
+// UDP_SOCKET
+
+/*******************************************************************************************
+  Parameters
+  (Uncomment and declare parameters as needed)
+*******************************************************************************************/
+// INTEGER_PARAMETER
+// SIGNED_INTEGER_PARAMETER
+// LONG_INTEGER_PARAMETER
+// SIGNED_LONG_INTEGER_PARAMETER
+// STRING_PARAMETER
+
+/*******************************************************************************************
+  Parameter Properties
+  (Uncomment and declare parameter properties as needed)
+*******************************************************************************************/
+/*
+#BEGIN_PARAMETER_PROPERTIES parameter_variable, parameter_variable, ...
+   // propValidUnits = // unitString or unitDecimal|unitHex|unitPercent|unitCharacter|unitTime|unitTicks;
+   // propDefaultUnit = // unitString, unitDecimal, unitHex, unitPercent, unitCharacter, unitTime or unitTicks;
+   // propBounds = lower_bound , upper_bound;
+   // propDefaultValue = ;  // or, propDefaultValue = "";
+   // propList = // { "value" , "label" } , { "value" , "label" } , ... ;
+   // propShortDescription = "status_bar_hint_text";
+   // #BEGIN_PROP_FULL_DESCRIPTION  line_1...  line_2...  line_n  #END_PROP_FULL_DESCRIPTION
+   // #BEGIN_PROP_NOTES line_1...  line_2...  line_n  #END_PROP_NOTES
+#END_PARAMETER_PROPERTIES
+*/
+
+/*******************************************************************************************
+  Structure Definitions
+  (Uncomment and define structure definitions as needed)
+  Note:  Be sure to initialize all declared STRING variables as needed
+         For example, in Function Main: struct.myString = "";
+*******************************************************************************************/
+/*
+STRUCTURE MyStruct1
+{
+};
+
+MyStruct1 struct;
+*/
+
+/*******************************************************************************************
+  Global Variables
+  (Uncomment and declare global variables as needed)
+  Note:  Be sure to initialize all declared STRING variables as needed
+         For example, in Function Main: myString = "";
+*******************************************************************************************/
+INTEGER iS1TargetTemperature;
+INTEGER iS1TargetTemperatureHigh;
+INTEGER iS1TargetTemperatureLow;
+INTEGER iS1TempScale;
+INTEGER iS2TargetTemperature;
+INTEGER iS2TargetTemperatureHigh;
+INTEGER iS2TargetTemperatureLow;
+INTEGER iS2TempScale;
+INTEGER iThermostatSelected;
+STRING sTemperatureScale[1];
+INTEGER iAllClear;
+INTEGER iLoopAllClear;
+STRING sS1HvacMode[10][11];
+STRING sS1FanTimerActive[10][6];
+STRING sS1TargetTempC[10][7];
+STRING sS1TargetTempF[10][6];
+STRING sS1TargetTempHighC[10][7];
+STRING sS1TargetTempHighF[10][6];
+STRING sS1TargetTempLowC[10][7];
+STRING sS1TargetTempLowF[10][6];
+STRING sS2HvacMode[10][11];
+STRING sS2FanTimerActive[10][6];
+STRING sS2TargetTempC[10][7];
+STRING sS2TargetTempF[10][6];
+STRING sS2TargetTempHighC[10][7];
+STRING sS2TargetTempHighF[10][6];
+STRING sS2TargetTempLowC[10][7];
+STRING sS2TargetTempLowF[10][6];
+INTEGER iAway[2];
+INTEGER iStructureSelected;
+INTEGER iStructureSelectedLast;
+STRING sAway[2][10];
+INTEGER iTempScale;
+STRING sS1AwayMode[10];
+STRING sS2AwayMode[10];
+STRING sStructureID[2][150];
+STRING sHVACMode[11];
+INTEGER iThermostatOnline;
+STRING sCode[20];
+  
+/*******************************************************************************************
+  Functions
+  (Add any additional functions here)
+  Note:  Functions must be physically placed before the location in
+         the code that calls them.
+*******************************************************************************************/
+Function SelectThermostat(INTEGER iSelected)
+{
+
+	INTEGER a;
+
+	if(iSelected)
+	{
+		for(a = 1 to 10)
+		{
+			Selected_Thermostat[a] = 0;
+		}
+		Selected_Thermostat[iSelected] = 1;
+	    cswitch(iStructureSelected)
+		{
+			case(1):
+			{
+				Selected_Thermostat_Text = UserClass.sS1Name[iSelected];	
+
+				Locale_Text = UserClass.sS1Locale[iSelected];
+				sTemperatureScale = UserClass.sS1TemperatureScale[iSelected];
+   				Temperature_Scale_Text = sTemperatureScale;
+
+				Software_Version_Text = UserClass.sS1SoftwareVersion[iSelected];
+				Device_ID_Text = UserClass.sS1DeviceId[iSelected];
+
+				HVAC_Mode_Text = upper(UserClass.sS1HvacMode[iSelected]);
+				Mode_Is_Off = 0;
+				Mode_Is_Heat_Cool = 0;
+				Mode_Is_Heat = 0;
+				Mode_Is_Cool = 0;
+				sHVACMode = UserClass.sS1HvacMode[iSelected];
+				if(sHVACMode = "off")
+					Mode_Is_Off = 1;
+				else if(sHVACMode = "heat-cool")
+					Mode_Is_Heat_Cool = 1;
+				else if(sHVACMode = "heat")
+					Mode_Is_Heat = 1;
+				else if(sHVACMode = "cool")
+					Mode_Is_Cool = 1;
+		
+				Target_Temperature_C_Text = UserClass.sS1TargetTemperatureC[iSelected];
+				Target_Temperature_F_Text = UserClass.sS1TargetTemperatureF[iSelected];
+				Target_Temperature_High_C_Text = UserClass.sS1TargetTemperatureHighC[iSelected];
+				Target_Temperature_High_F_Text = UserClass.sS1TargetTemperatureHighF[iSelected];
+				Target_Temperature_Low_C_Text = UserClass.sS1TargetTemperatureLowC[iSelected];
+				Target_Temperature_Low_F_Text = UserClass.sS1TargetTemperatureLowF[iSelected];
+				Ambient_Temperature_C_Text = UserClass.sS1AmbientTemperatureC[iSelected];
+				Ambient_Temperature_F_Text = UserClass.sS1AmbientTemperatureF[iSelected];
+
+				Is_Using_Emergency_Heat = UserClass.simplS1BIsUsingEmergencyHeat[iSelected];
+				Fan_Timer_Is_Active = UserClass.simplS1BFanTimerActive[iSelected];
+				Has_Fan = UserClass.simplS1BHasFan[iSelected];
+				Has_Leaf = UserClass.simplS1BHasLeaf[iSelected];
+
+
+				if(UserClass.simplS1BIsOnline[iSelected])
+				{
+					iThermostatOnline = ciYes;
+					Is_Offline = 0;
+					Is_Online = 1;
+				}
+				else
+				{
+					iThermostatOnline = ciNo;
+					Is_Online = 0;
+					Is_Offline = 1;
+				}	
+
+
+
+				if(sTemperatureScale = "F")
+				{
+					iTempScale = ciF; 
+					iS1TargetTemperature = atoi(UserClass.sS1TargetTemperatureF[iSelected]);
+					iS1TargetTemperatureHigh = atoi(UserClass.sS1TargetTemperatureHighF[iSelected]);
+					iS1TargetTemperatureLow = atoi(UserClass.sS1TargetTemperatureLowF[iSelected]);
+				}		
+				else if(sTemperatureScale = "C")
+				{
+					iTempScale = ciC;
+					if(find(".", UserClass.sS1TargetTemperatureC[iSelected]))
+						iS1TargetTemperature = atoi(UserClass.sS1TargetTemperatureC[iSelected]) * 10 + atoi(right(UserClass.sS1TargetTemperatureC[iSelected], 1));
+					else
+			            iS1TargetTemperature = atoi(UserClass.sS1TargetTemperatureC[iSelected]) * 10;
+			
+					if(find(".", UserClass.sS1TargetTemperatureHighC[iSelected]))
+						iS1TargetTemperatureHigh = atoi(UserClass.sS1TargetTemperatureHighC[iSelected]) * 10 + atoi(right(UserClass.sS1TargetTemperatureHighC[iSelected], 1));
+					else
+			            iS1TargetTemperatureHigh = atoi(UserClass.sS1TargetTemperatureHighC[iSelected]) * 10;
+			
+					if(find(".", UserClass.sS1TargetTemperatureLowC[iSelected]))
+						iS1TargetTemperatureLow = atoi(UserClass.sS1TargetTemperatureLowC[iSelected]) * 10 + atoi(right(UserClass.sS1TargetTemperatureLowC[iSelected], 1));
+					else
+			            iS1TargetTemperatureLow = atoi(UserClass.sS1TargetTemperatureLowC[iSelected]) * 10;
+			
+				}
+				break;
+			}
+			case(2):
+			{
+				Selected_Thermostat_Text = UserClass.sS2Name[iSelected];	
+
+				Locale_Text = UserClass.sS2Locale[iSelected];
+				sTemperatureScale = UserClass.sS2TemperatureScale[iSelected];
+				Temperature_Scale_Text = sTemperatureScale;
+
+				Software_Version_Text = UserClass.sS2SoftwareVersion[iSelected];
+				Device_ID_Text = UserClass.sS2DeviceId[iSelected];
+
+				HVAC_Mode_Text = upper(UserClass.sS2HvacMode[iSelected]);
+
+				Mode_Is_Off = 0;
+				Mode_Is_Heat_Cool = 0;
+				Mode_Is_Heat = 0;
+				Mode_Is_Cool = 0;
+				sHVACMode = UserClass.sS2HvacMode[iSelected];
+				if(sHVACMode = "off")
+					Mode_Is_Off = 1;
+				else if(sHVACMode = "heat-cool")
+					Mode_Is_Heat_Cool = 1;
+				else if(sHVACMode = "heat")
+					Mode_Is_Heat = 1;
+				else if(sHVACMode = "cool")
+					Mode_Is_Cool = 1;
+		
+				Target_Temperature_C_Text = UserClass.sS2TargetTemperatureC[iSelected];
+				Target_Temperature_F_Text = UserClass.sS2TargetTemperatureF[iSelected];
+				Target_Temperature_High_C_Text = UserClass.sS2TargetTemperatureHighC[iSelected];
+				Target_Temperature_High_F_Text = UserClass.sS2TargetTemperatureHighF[iSelected];
+				Target_Temperature_Low_C_Text = UserClass.sS2TargetTemperatureLowC[iSelected];
+				Target_Temperature_Low_F_Text = UserClass.sS2TargetTemperatureLowF[iSelected];
+				Ambient_Temperature_C_Text = UserClass.sS2AmbientTemperatureC[iSelected];
+				Ambient_Temperature_F_Text = UserClass.sS2AmbientTemperatureF[iSelected];
+
+				Is_Using_Emergency_Heat = UserClass.simplS2BIsUsingEmergencyHeat[iSelected];
+				Fan_Timer_Is_Active = UserClass.simplS2BFanTimerActive[iSelected];
+				Has_Fan = UserClass.simplS2BHasFan[iSelected];
+				Has_Leaf = UserClass.simplS2BHasLeaf[iSelected];
+
+				if(UserClass.simplS2BIsOnline[iSelected])
+				{
+					Is_Offline = 0;
+					Is_Online = 1;
+				}
+				else
+				{
+					Is_Online = 0;
+					Is_Offline = 1;
+				}
+
+
+
+				if(sTemperatureScale = "F")
+				{
+					iTempScale = ciF; 
+					iS2TargetTemperature = atoi(UserClass.sS2TargetTemperatureF[iSelected]);
+					iS2TargetTemperatureHigh = atoi(UserClass.sS2TargetTemperatureHighF[iSelected]);
+					iS2TargetTemperatureLow = atoi(UserClass.sS2TargetTemperatureLowF[iSelected]);
+				}		
+				else if(sTemperatureScale = "C")
+				{
+					iTempScale = ciC;
+					if(find(".", UserClass.sS2TargetTemperatureC[iSelected]))
+						iS2TargetTemperature = atoi(UserClass.sS2TargetTemperatureC[iSelected]) * 10 + atoi(right(UserClass.sS2TargetTemperatureC[iSelected], 1));
+					else
+			            iS2TargetTemperature = atoi(UserClass.sS2TargetTemperatureC[iSelected]) * 10;
+			
+					if(find(".", UserClass.sS2TargetTemperatureHighC[iSelected]))
+						iS2TargetTemperatureHigh = atoi(UserClass.sS2TargetTemperatureHighC[iSelected]) * 10 + atoi(right(UserClass.sS2TargetTemperatureHighC[iSelected], 1));
+					else
+			            iS2TargetTemperatureHigh = atoi(UserClass.sS2TargetTemperatureHighC[iSelected]) * 10;
+			
+					if(find(".", UserClass.sS2TargetTemperatureLowC[iSelected]))
+						iS2TargetTemperatureLow = atoi(UserClass.sS2TargetTemperatureLowC[iSelected]) * 10 + atoi(right(UserClass.sS2TargetTemperatureLowC[iSelected], 1));
+					else
+			            iS2TargetTemperatureLow = atoi(UserClass.sS2TargetTemperatureLowC[iSelected]) * 10;
+			
+				}
+				break;
+			}
+		}
+	}
+	else
+	{
+		for(a = 1 to 10)
+		{
+			Selected_Thermostat[a] = 0;
+		}
+		Selected_Thermostat_Text = "";
+		Locale_Text = "";
+		sTemperatureScale = "";
+		Temperature_Scale_Text = "";
+
+		Software_Version_Text = "";
+		Device_ID_Text = "";
+		HVAC_Mode_Text = "";
+		Mode_Is_Off = 0;
+		Mode_Is_Heat_Cool = 0;
+		Mode_Is_Heat = 0;
+		Mode_Is_Cool = 0;
+
+		Target_Temperature_C_Text = "";
+		Target_Temperature_F_Text = "";
+		Target_Temperature_High_C_Text = "";
+		Target_Temperature_High_F_Text = "";
+		Target_Temperature_Low_C_Text = "";
+		Target_Temperature_Low_F_Text = "";
+		Ambient_Temperature_C_Text = "";
+		Ambient_Temperature_F_Text = "";
+		Is_Using_Emergency_Heat = 0;
+		Fan_Timer_Is_Active = 0;
+		Has_Leaf = 0;
+		Is_Offline = 0;
+		Is_Online = 0;
+	}
+}
+
+Function DisplayThermostats(INTEGER iStructureSelected)
+{
+
+	INTEGER a;
+	
+	Number_Of_Thermostats = UserClass.numberOfThermostats[iStructureSelected];  // max value 10
+	for(a = 1 to UserClass.numberOfThermostats[iStructureSelected])
+	{
+		Thermostat_Select_Text[a] = "";
+	}
+	cswitch(iStructureSelected)
+	{	
+		case(1):
+		{
+			for(a = 1 to UserClass.numberOfThermostats[iStructureSelected])
+			{
+				Thermostat_Select_Text[a] = UserClass.sS1NameLong[a];
+			}
+			break;
+		}
+		case(2):
+		{
+			for(a = 1 to UserClass.numberOfThermostats[iStructureSelected])
+			{
+				Thermostat_Select_Text[a] = UserClass.sS2NameLong[a];
+			}
+			break;
+		}
+	}
+	SelectThermostat(iThermostatSelected);
+}
+
+
+Function SelectStructure(INTEGER iSelected)
+{
+
+	INTEGER a;
+
+	for(a = 1 to 2)
+	{
+		Selected_Structure[a] = 0;
+	}
+	Selected_Structure[iSelected] = 1;
+	if(sAway[iSelected] = "away")
+	{
+		Selected_Structure_Away_Text = "Away";	
+	}
+	else if(sAway[iSelected] = "auto-away")
+	{
+		Selected_Structure_Away_Text = "Auto-Away";
+	}
+	else if(sAway[iSelected] = "home")
+	{
+		Selected_Structure_Away_Text = "Home";
+	}
+	Selected_Structure_Text = UserClass.sStructureName[iSelected];
+	DisplayThermostats(iSelected);		
+	SelectThermostat(iThermostatSelected);
+
+}
+
+Function DisplayStructures()
+{
+
+	INTEGER a;
+	
+	Number_Of_Structures = UserClass.numberOfStructures;		// max value 2
+	for(a = 1 to UserClass.numberOfStructures)
+	{
+		Structure_Select_Text[a] = UserClass.sStructureName[a];
+		sAway[a] = UserClass.sStructureAway[a];
+		sStructureID[a] = UserClass.sStructureId[a];
+		if(sAway[a] = "away")
+		{
+			Structure_Away_Text[a] = "Away";
+			iAway[a] = ciYes;
+		}
+		if(sAway[a] = "auto-away")
+		{
+			Structure_Away_Text[a] = "Auto-Away";
+			iAway[a] = ciYes;
+		}
+		else if(sAway[a] = "home")
+		{
+			Structure_Away_Text[a] = "Home";
+			iAway[a] = ciNo;
+		}
+	}
+	if(UserClass.numberOfStructures = 1)
+	{
+		if(iStructureSelected != 1)
+			iStructureSelected = 1;
+		
+  	}
+	SelectStructure(iStructureSelected);
+
+}
+
+Function RegDelegates()
+{
+	RegisterDelegate(UserClass, SendIndicator, ProcessIndicator);
+}
+
+Function CommandActive()
+{
+
+	INTEGER a;
+	STRING sTemp[13];
+	STRING sRequest[12];
+ 
+	iAllClear = ciNo;
+	iLoopAllClear = ciYes;
+	All_Clear = iAllClear;
+	if(sS1AwayMode <> "clear")
+	{
+		iLoopAllClear = ciNo;
+		sRequest = sS1AwayMode; 	
+		sS1AwayMode = "clear";
+		UserClass.Send_Command("structures", UserClass.sStructureId[1], "away", sRequest);
+	}
+	else if(sS2AwayMode <> "clear")
+	{
+		iLoopAllClear = ciNo;
+		sRequest = sS2AwayMode; 	
+		sS2AwayMode = "clear";
+		UserClass.Send_Command("structures", UserClass.sStructureId[2], "away", sRequest);
+	}
+	else
+	{
+		for(a = 1 to 10)
+		{
+			if(sS1HvacMode[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				if(sS1HvacMode[a] = "\x22heat\x22" || sS1HvacMode[a] = "\x22cool\x22")
+				{
+					sS1TargetTempHighC[a] = "clear";
+					sS1TargetTempLowC[a] = "clear";
+					sS1TargetTempHighF[a] = "clear";
+					sS1TargetTempLowF[a] = "clear";
+		 		}
+				else if(sS1HvacMode[a] = "\x22heat-cool\x22")
+				{
+					sS1TargetTempC[a] = "clear";
+					sS1TargetTempF[a] = "clear";	
+	 			}
+				sTemp = sS1HvacMode[a];
+				sS1HvacMode[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS1ThermostatKey[a], "hvac_mode", sTemp);
+				break;
+			}
+			else if(sS2HvacMode[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				if(sS2HvacMode[a] = "\x22heat\x22" || sS2HvacMode[a] = "\x22cool\x22")
+				{
+					sS2TargetTempHighC[a] = "clear";
+					sS2TargetTempLowC[a] = "clear";
+					sS2TargetTempHighF[a] = "clear";
+					sS2TargetTempLowF[a] = "clear";
+		 		}
+				else if(sS2HvacMode[a] = "\x22heat-cool\x22")
+				{
+					sS2TargetTempC[a] = "clear";
+					sS2TargetTempF[a] = "clear";	
+	 			}
+				sTemp = sS2HvacMode[a]; 	
+				sS2HvacMode[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS2ThermostatKey[a], "hvac_mode", sTemp);
+				break;
+			}
+			else if(sS1FanTimerActive[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				sTemp = sS1FanTimerActive[a]; 	
+				sS1FanTimerActive[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS1ThermostatKey[a], "fan_timer_active", sTemp);
+				break;
+			}
+			else if(sS2FanTimerActive[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				sTemp = sS2FanTimerActive[a]; 	
+				sS2FanTimerActive[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS2ThermostatKey[a], "fan_timer_active", sTemp);
+				break;
+			}
+			else if(sS1TargetTempC[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				sTemp = sS1TargetTempC[a]; 	
+				sS1TargetTempC[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS1ThermostatKey[a], "target_temperature_c", sTemp);
+				break;
+			}
+			else if(sS2TargetTempC[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				sTemp = sS2TargetTempC[a]; 	
+				sS2TargetTempC[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS2ThermostatKey[a], "target_temperature_c", sTemp);
+				break;
+			}
+			else if(sS1TargetTempF[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				sTemp = sS1TargetTempF[a];
+				sS1TargetTempF[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS1ThermostatKey[a], "target_temperature_f", sTemp);
+				break;
+			}
+			else if(sS2TargetTempF[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				sTemp = sS2TargetTempF[a];
+				sS2TargetTempF[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS2ThermostatKey[a], "target_temperature_f", sTemp);
+				break;
+			}
+			else if(sS1TargetTempHighC[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				sTemp = sS1TargetTempHighC[a]; 	
+				sS1TargetTempHighC[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS1ThermostatKey[a], "target_temperature_high_c", sTemp);
+				break;
+			}
+			else if(sS2TargetTempHighC[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				sTemp = sS2TargetTempHighC[a]; 	
+				sS2TargetTempHighC[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS2ThermostatKey[a], "target_temperature_high_c", sTemp);
+				break;
+			}
+			else if(sS1TargetTempHighF[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				sTemp = sS1TargetTempHighF[a]; 	
+				sS1TargetTempHighF[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS1ThermostatKey[a], "target_temperature_high_f", sTemp);
+				break;
+			}
+			else if(sS2TargetTempHighF[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				sTemp = sS2TargetTempHighF[a]; 	
+				sS2TargetTempHighF[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS2ThermostatKey[a], "target_temperature_high_f", sTemp);
+				break;
+			}
+			else if(sS1TargetTempLowC[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				sTemp = sS1TargetTempLowC[a]; 	
+				sS1TargetTempLowC[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS1ThermostatKey[a], "target_temperature_low_c", sTemp);
+				break;
+			}
+			else if(sS2TargetTempLowC[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				sTemp = sS2TargetTempLowC[a]; 	
+				sS2TargetTempLowC[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS2ThermostatKey[a], "target_temperature_low_c", sTemp);
+				break;
+			}
+			else if(sS1TargetTempLowF[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				sTemp = sS1TargetTempLowF[a]; 	
+				sS1TargetTempLowF[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS1ThermostatKey[a], "target_temperature_low_f", sTemp);
+				break;
+			}
+			else if(sS2TargetTempLowF[a] <> "clear")
+			{
+				iLoopAllClear = ciNo;
+				sTemp = sS2TargetTempLowF[a]; 	
+				sS2TargetTempLowF[a] = "clear";
+				UserClass.Send_Command("devices/thermostats", UserClass.sS2ThermostatKey[a], "target_temperature_low_f", sTemp);
+				break;
+			}
+		}
+	}
+	if(iLoopAllClear = ciYes)
+	{
+		iAllClear = ciYes;
+		All_Clear = iAllClear;
+	}
+	if(iAllClear = ciNo)
+	{
+		wait(200, SendNext)
+		{
+			CommandActive();
+		}
+	}
+}
+
+
+/*******************************************************************************************
+  Event Handlers
+  (Uncomment and declare additional event handlers as needed)
+*******************************************************************************************/
+Callback Function ProcessIndicator(integer iValue)
+{
+
+	INTEGER a;
+
+	cswitch(iValue)
+	{
+		case(ciDelay):
+		{
+			delay(150);
+			break;
+		}
+		case(5):
+		{
+			DisplayStructures();
+			break;
+     	}
+		case(6):
+		{
+			Please_Try_Later_Text = UserClass.sTryAgain;
+			Please_Try_Later = 1;
+			wait(350)
+			{
+				Please_Try_Later = 0;
+				Please_Try_Later_Text = "";
+			}
+			break;
+     	}
+		case(ciTokenSuccess):
+		{
+			Token_Status_Text = "Authorization Successful";
+			Token_Status = 1;
+			wait(350)
+			{
+				Token_Status = 0;
+			}
+			break;
+		}
+		case(ciTokenFail):
+		{
+			Token_Status_Text = "Authorization Not Found";
+			Token_Status = 1;
+			wait(350)
+			{
+				Token_Status = 0;
+			}
+			break;
+		}
+	}
+}
+
+PUSH Send
+{
+    UserClass.Get_Access_Token(sCode);
+}
+
+PUSH Retrieve_Status
+{
+ 	UserClass.Get_All_Status();
+}
+
+CHANGE Code
+{
+	sCode = Code;
+}
+PUSH Home_Away
+{
+ 	cswitch(iStructureSelected)
+	{
+		case(1):
+		{
+			if(sAway[1] != "home")
+			{
+				sS1AwayMode = "\x22home\x22";
+				iAway[1] = ciNo;
+				sAway[1] = "home";
+				Selected_Structure_Away_Text = "Home";
+			}
+			else
+			{
+				sS1AwayMode = "\x22away\x22";
+				iAway[1] = ciYes;
+				sAway[1] = "away";
+				Selected_Structure_Away_Text = "Away";
+			}
+			Structure_Away_Text[iStructureSelected] = upper(mid(sS1AwayMode, 2, 1)) + mid(sS1AwayMode, 3, len(sS1AwayMode) - 3);
+			break;
+		}
+		case(2):
+		{
+			if(sAway[2] != "home")
+			{
+				sS2AwayMode = "\x22home\x22";
+				iAway[2] = ciNo;
+				sAway[2] = "home";
+				Selected_Structure_Away_Text = "Home";
+			}	
+			else
+			{
+				sS2AwayMode = "\x22away\x22";
+				iAway[2] = ciYes;
+				sAway[2] = "away";
+				Selected_Structure_Away_Text = "Away";
+			}
+			Structure_Away_Text[iStructureSelected] = upper(mid(sS2AwayMode, 2, 1)) + mid(sS2AwayMode, 3, len(sS2AwayMode) - 3);
+			break;
+		}
+	}
+	if(iAllClear = ciYes)
+		CommandActive();	
+
+}
+
+CHANGE HVAC_Mode
+{
+	if(iAway[iStructureSelected] = ciNo && iThermostatOnline = ciYes)
+	{
+   		cswitch(iStructureSelected)
+		{            
+			case(1):
+			{
+				sS1HvacMode[iThermostatSelected] = HVAC_Mode;
+				break;
+			}
+			case(2):
+			{
+				sS2HvacMode[iThermostatSelected] = HVAC_Mode;
+				break;
+			}
+		}
+		Mode_Is_Off = 0;
+		Mode_Is_Heat_Cool = 0;
+		Mode_Is_Heat = 0;
+		Mode_Is_Cool = 0;
+		HVAC_Mode_Text = upper(mid(HVAC_Mode, 2, len(HVAC_Mode) - 2));
+		if(HVAC_Mode = "\x22off\x22")
+			Mode_Is_Off = 1;
+		else if(HVAC_Mode = "\x22heat-cool\x22")
+			Mode_Is_Heat_Cool = 1;
+		else if(HVAC_Mode = "\x22heat\x22")
+			Mode_Is_Heat = 1;
+		else if(HVAC_Mode = "\x22cool\x22")
+			Mode_Is_Cool = 1;
+
+		if(iAllClear = ciYes)
+			CommandActive();
+	}
+}
+
+CHANGE Away_Mode
+{
+ 	cswitch(iStructureSelected)
+	{
+		case(1):
+		{
+			sS1AwayMode = Away_Mode;
+			Structure_Away_Text[iStructureSelected] = upper(mid(Away_Mode, 2, len(Away_Mode) - 2));
+			break;
+		}
+		case(2):
+		{
+			sS2AwayMode = Away_Mode;
+			Structure_Away_Text[iStructureSelected] = upper(mid(Away_Mode, 2, len(Away_Mode) - 2));
+			break;
+		}
+	}
+	if(iAllClear = ciYes)
+		CommandActive();		
+}
+
+PUSH Select_Thermostat
+{
+	INTEGER a;
+
+	iThermostatSelected = getlastmodifiedarrayindex();
+  	Thermostat_Selected_Value = iThermostatSelected;
+	SelectThermostat(iThermostatSelected);
+}
+
+PUSH Select_Structure
+{
+	INTEGER a;
+
+	iStructureSelected = getlastmodifiedarrayindex();
+	if(iStructureSelected <> iStructureSelectedLast)
+	{
+		iThermostatSelected = 0;
+		Thermostat_Selected_Value = iThermostatSelected;
+	}
+	iStructureSelectedLast = iStructureSelected;
+  	Structure_Selected_Value = iStructureSelected;
+	SelectStructure(iStructureSelected);
+}
+
+RELEASE Target_Temperature
+{
+	STRING sTargetTemperature[4];
+   	
+	if(iAway[iStructureSelected] = ciNo && Mode_Is_Off = 0 && iThermostatOnline = ciYes)
+	{
+		cswitch(iStructureSelected)
+		{
+			case(1):
+			{
+				if(iTempScale = ciF)
+				{
+					sTargetTemperature = itoa(iS1TargetTemperature);
+					sS1TargetTempC[iThermostatSelected] = "clear";
+					sS1TargetTempF[iThermostatSelected] = sTargetTemperature;
+				}
+				else if(iTempScale = ciC)
+				{
+					sTargetTemperature = itoa(iS1TargetTemperature / 10) + "." + itoa(iS1TargetTemperature mod 10);
+					sS1TargetTempF[iThermostatSelected] = "clear";
+					sS1TargetTempC[iThermostatSelected] = sTargetTemperature;
+ 				}
+				break;
+			}
+			case(2):
+			{
+				if(iTempScale = ciF)
+				{
+					sTargetTemperature = itoa(iS2TargetTemperature);
+					sS2TargetTempC[iThermostatSelected] = "clear";
+					sS2TargetTempF[iThermostatSelected] = sTargetTemperature;
+				}
+				else if(iTempScale = ciC)
+				{
+					sTargetTemperature = itoa(iS2TargetTemperature / 10) + "." + itoa(iS2TargetTemperature mod 10);
+					sS2TargetTempF[iThermostatSelected] = "clear";
+					sS2TargetTempC[iThermostatSelected] = sTargetTemperature;
+ 				}
+				break;
+			}
+		}
+		if(iAllClear = ciYes)
+			CommandActive();
+	}
+}
+
+
+PUSH Target_Temperature
+{
+	if(iAway[iStructureSelected] = ciNo && Mode_Is_Off = 0 && iThermostatOnline = ciYes)
+	{	
+		while(Target_Temperature[1] || Target_Temperature[2])
+		{
+			cswitch(iStructureSelected)
+			{
+				case(1):
+				{
+					if(iTempScale = ciF)
+					{
+						if(getlastmodifiedarrayindex() = 1 && iS1TargetTemperature < 90)
+							iS1TargetTemperature = iS1TargetTemperature + 1;
+						else if(getlastmodifiedarrayindex() = 2 && iS1TargetTemperature > 50)
+							iS1TargetTemperature = iS1TargetTemperature - 1;
+							Target_Temperature_F_Text = itoa(iS1TargetTemperature);
+		
+					}
+					else if(iTempScale = ciC)
+					{
+						if(getlastmodifiedarrayindex() = 1 && iS1TargetTemperature < 320)
+							iS1TargetTemperature = iS1TargetTemperature + 5;
+						else if(getlastmodifiedarrayindex() = 2 && iS1TargetTemperature > 90)
+							iS1TargetTemperature = iS1TargetTemperature - 5;
+						Target_Temperature_C_Text = itoa(iS1TargetTemperature / 10) + "." + itoa(iS1TargetTemperature mod 10);
+					}
+					break;
+				}
+				case(2):
+				{
+					if(iTempScale = ciF)
+					{
+						if(getlastmodifiedarrayindex() = 1 && iS2TargetTemperature < 90)
+							iS2TargetTemperature = iS2TargetTemperature + 1;
+						else if(getlastmodifiedarrayindex() = 2 && iS2TargetTemperature > 50)
+							iS2TargetTemperature = iS2TargetTemperature - 1;
+						Target_Temperature_F_Text = itoa(iS2TargetTemperature);		
+					}
+					else if(iTempScale = ciC)
+					{
+						if(getlastmodifiedarrayindex() = 1 && iS2TargetTemperature < 320)
+							iS2TargetTemperature = iS2TargetTemperature + 5;
+						else if(getlastmodifiedarrayindex() = 2 && iS2TargetTemperature > 90)
+							iS2TargetTemperature = iS2TargetTemperature - 5;
+						Target_Temperature_C_Text = itoa(iS2TargetTemperature / 10) + "." + itoa(iS2TargetTemperature mod 10);
+					}
+					break;
+				}
+			}
+			delay(30);
+		}
+	}
+}
+
+RELEASE Target_Temperature_High
+{
+	STRING sTargetTemperature[4];
+   	
+	if(iAway[iStructureSelected] = ciNo && Mode_Is_Off = 0 && iThermostatOnline = ciYes)
+	{
+		cswitch(iStructureSelected)
+		{
+			case(1):
+			{
+		
+				if(iTempScale = ciF)
+				{
+					sTargetTemperature = itoa(iS1TargetTemperatureHigh);
+					sS1TargetTempHighC[iThermostatSelected] = "clear";
+					sS1TargetTempHighF[iThermostatSelected] = sTargetTemperature;
+				}
+				else if(iTempScale = ciC)
+				{
+					sTargetTemperature = itoa(iS1TargetTemperatureHigh / 10) + "." + itoa(iS1TargetTemperatureHigh mod 10);
+					sS1TargetTempHighF[iThermostatSelected] = "clear";
+					sS1TargetTempHighC[iThermostatSelected] = sTargetTemperature;
+ 				}
+				break;
+			}
+			case(2):
+			{			
+				if(iTempScale = ciF)
+				{
+					sTargetTemperature = itoa(iS2TargetTemperatureHigh);
+					sS2TargetTempHighC[iThermostatSelected] = "clear";
+					sS2TargetTempHighF[iThermostatSelected] = sTargetTemperature;
+				}
+				else if(iTempScale = ciC)
+				{
+					sTargetTemperature = itoa(iS2TargetTemperatureHigh / 10) + "." + itoa(iS2TargetTemperatureHigh mod 10);
+					sS2TargetTempHighF[iThermostatSelected] = "clear";
+					sS2TargetTempHighC[iThermostatSelected] = sTargetTemperature;
+				}
+				break;
+			}
+		}
+		if(iAllClear = ciYes)
+			CommandActive();
+	}
+}
+
+
+PUSH Target_Temperature_High
+{
+	if(iAway[iStructureSelected] = ciNo && sHVACMode != "off" && iThermostatOnline = ciYes)
+	{	
+		while(Target_Temperature_High[1] || Target_Temperature_High[2])
+		{
+			cswitch(iStructureSelected)
+			{
+				case(1):
+				{
+
+						if(iTempScale = ciF)
+						{
+							if(getlastmodifiedarrayindex() = 1 && iS1TargetTemperatureHigh < 90)
+								iS1TargetTemperatureHigh = iS1TargetTemperatureHigh + 1;
+							else if(getlastmodifiedarrayindex() = 2 && iS1TargetTemperatureHigh > 50)
+								iS1TargetTemperatureHigh = iS1TargetTemperatureHigh - 1;
+							Target_Temperature_High_F_Text = itoa(iS1TargetTemperatureHigh);
+		
+						}
+						else if(iTempScale = ciC)
+						{
+							if(getlastmodifiedarrayindex() = 1 && iS1TargetTemperatureHigh < 320)
+								iS1TargetTemperatureHigh = iS1TargetTemperatureHigh + 5;
+							else if(getlastmodifiedarrayindex() = 2 && iS1TargetTemperatureHigh > 90)
+								iS1TargetTemperatureHigh = iS1TargetTemperatureHigh - 5;
+							Target_Temperature_High_C_Text = itoa(iS1TargetTemperatureHigh / 10) + "." + itoa(iS1TargetTemperatureHigh mod 10);
+						}
+					break;
+				}
+				case(2):
+				{
+						if(iTempScale = ciF)
+						{
+							if(getlastmodifiedarrayindex() = 1 && iS2TargetTemperatureHigh < 90)
+								iS2TargetTemperatureHigh = iS2TargetTemperatureHigh + 1;
+							else if(getlastmodifiedarrayindex() = 2 && iS2TargetTemperatureHigh > 50)
+								iS2TargetTemperatureHigh = iS2TargetTemperatureHigh - 1;
+							Target_Temperature_High_F_Text = itoa(iS2TargetTemperatureHigh);
+		
+						}
+						else if(iTempScale = ciC)
+						{
+							if(getlastmodifiedarrayindex() = 1 && iS2TargetTemperatureHigh < 320)
+								iS2TargetTemperatureHigh = iS2TargetTemperatureHigh + 5;
+							else if(getlastmodifiedarrayindex() = 2 && iS2TargetTemperatureHigh > 90)
+								iS2TargetTemperatureHigh = iS2TargetTemperatureHigh - 5;
+							Target_Temperature_High_C_Text = itoa(iS2TargetTemperatureHigh / 10) + "." + itoa(iS2TargetTemperatureHigh mod 10);
+						}
+					break;
+				}
+			}
+			delay(30);
+		}
+	}
+}
+
+RELEASE Target_Temperature_Low
+{
+
+	STRING sTargetTemperature[4];
+   	
+	if(iAway[iStructureSelected] = ciNo && Mode_Is_Off = 0 && iThermostatOnline = ciYes)
+	{
+		cswitch(iStructureSelected)
+		{
+			case(1):
+			{
+					if(iTempScale = ciF)
+					{
+						sTargetTemperature = itoa(iS1TargetTemperatureLow);
+						sS1TargetTempLowC[iThermostatSelected] = "clear";
+						sS1TargetTempLowF[iThermostatSelected] = sTargetTemperature;
+					}
+					else if(iTempScale = ciC)
+					{
+						sTargetTemperature = itoa(iS1TargetTemperatureLow / 10) + "." + itoa(iS1TargetTemperatureLow mod 10);
+						sS1TargetTempLowF[iThermostatSelected] = "clear";
+						sS1TargetTempLowC[iThermostatSelected] = sTargetTemperature;
+	 				}
+				break;
+			}
+			case(2):
+			{
+					if(iTempScale = ciF)
+					{
+						sTargetTemperature = itoa(iS2TargetTemperatureLow);
+						sS2TargetTempLowC[iThermostatSelected] = "clear";
+						sS2TargetTempLowF[iThermostatSelected] = sTargetTemperature;
+					}
+					else if(iTempScale = ciC)
+					{
+						sTargetTemperature = itoa(iS2TargetTemperatureLow / 10) + "." + itoa(iS2TargetTemperatureLow mod 10);
+						sS2TargetTempLowF[iThermostatSelected] = "clear";
+						sS2TargetTempLowC[iThermostatSelected] = sTargetTemperature;
+	 				}
+					break;
+			}
+		}
+		if(iAllClear = ciYes)
+			CommandActive();
+	}
+}
+
+
+PUSH Target_Temperature_Low
+{
+	if(iAway[iStructureSelected] = ciNo && Mode_Is_Off = 0 && iThermostatOnline = ciYes)
+	{	
+		while(Target_Temperature_Low[1] || Target_Temperature_Low[2])
+		{
+			cswitch(iStructureSelected)
+			{
+				case(1):
+				{
+						if(iTempScale = ciF)
+						{
+							if(getlastmodifiedarrayindex() = 1 && iS1TargetTemperatureLow < 90)
+								iS1TargetTemperatureLow = iS1TargetTemperatureLow + 1;
+							else if(getlastmodifiedarrayindex() = 2 && iS1TargetTemperatureLow > 50)
+								iS1TargetTemperatureLow = iS1TargetTemperatureLow - 1;
+							Target_Temperature_Low_F_Text = itoa(iS1TargetTemperatureLow);
+		
+						}
+						else if(iTempScale = ciC)
+						{
+							if(getlastmodifiedarrayindex() = 1 && iS1TargetTemperatureLow < 320)
+								iS1TargetTemperatureLow = iS1TargetTemperatureLow + 5;
+							else if(getlastmodifiedarrayindex() = 2 && iS1TargetTemperatureLow > 90)
+								iS1TargetTemperatureLow = iS1TargetTemperatureLow - 5;
+							Target_Temperature_Low_C_Text = itoa(iS1TargetTemperatureLow / 10) + "." + itoa(iS1TargetTemperatureLow mod 10);
+						}
+						break;
+				}
+				case(2):
+				{
+						if(iTempScale = ciF)
+						{
+							if(getlastmodifiedarrayindex() = 1 && iS2TargetTemperatureLow < 90)
+								iS2TargetTemperatureLow = iS2TargetTemperatureLow + 1;
+							else if(getlastmodifiedarrayindex() = 2 && iS2TargetTemperatureLow > 50)
+								iS2TargetTemperatureLow = iS2TargetTemperatureLow - 1;
+							Target_Temperature_Low_F_Text = itoa(iS2TargetTemperatureLow);
+		
+						}
+						else if(iTempScale = ciC)
+						{
+							if(getlastmodifiedarrayindex() = 1 && iS2TargetTemperatureLow < 320)
+								iS2TargetTemperatureLow = iS2TargetTemperatureLow + 5;
+							else if(getlastmodifiedarrayindex() = 2 && iS2TargetTemperatureLow > 90)
+								iS2TargetTemperatureLow = iS2TargetTemperatureLow - 5;
+							Target_Temperature_Low_C_Text = itoa(iS2TargetTemperatureLow / 10) + "." + itoa(iS2TargetTemperatureLow mod 10);
+						}
+					
+					break;
+				}
+			}
+			delay(30);
+		}
+	}
+}
+
+
+/*******************************************************************************************
+  Main()
+  Uncomment and place one-time startup code here
+  (This code will get called when the system starts up)
+*******************************************************************************************/
+Function Main()
+{
+
+	INTEGER a;
+
+	RegDelegates();
+
+	iStructureSelected = 1;
+	UserClass.LoadSettings();
+	UserClass.Get_All_Status();
+	iAllClear = ciYes;
+	iLoopAllClear = ciYes;
+	All_Clear = iAllClear;
+	iThermostatSelected = 0;
+	Thermostat_Selected_Value = iThermostatSelected;
+
+	for(a = 1 to 10)
+	{
+		sS1HvacMode[a] = "clear";
+		sS1FanTimerActive[a] = "clear";
+		sS1TargetTempC[a] = "clear";
+		sS1TargetTempF[a] = "clear";
+		sS1TargetTempHighC[a] = "clear";
+		sS1TargetTempHighF[a] = "clear";
+		sS1TargetTempLowC[a] = "clear";
+		sS1TargetTempLowF[a] = "clear";
+		sS2HvacMode[a] = "clear";
+		sS2FanTimerActive[a] = "clear";
+		sS2TargetTempC[a] = "clear";
+		sS2TargetTempF[a] = "clear";
+		sS2TargetTempHighC[a] = "clear";
+		sS2TargetTempHighF[a] = "clear";
+		sS2TargetTempLowC[a] = "clear";
+		sS2TargetTempLowF[a] = "clear";
+		sS1AwayMode = "clear";
+		sS2AwayMode = "clear";
+		Selected_Thermostat[a] = 0;
+	}
+}

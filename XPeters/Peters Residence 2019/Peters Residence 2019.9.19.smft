@@ -1,0 +1,35 @@
+<Device Model="MC3" Name="MC3.">
+   <Network Type="Cresnet" Id="01">
+      <Device Model="CNAMPX-16X60" DeviceId="23" Name="CNAMPX-16x60"/>
+      <Device Model="CNX-BIPAD-8,CNX-BIPAD8" DeviceId="4B" Name="CNX-BIPAD8"/>
+      <Device Model="CNX-B12" DeviceId="60" Name="CNX-B12 Guest 1"/>
+      <Device Model="CNX-B12" DeviceId="61" Name="CNX-B12 Guest 2"/>
+      <Device Model="CNX-B12" DeviceId="62" Name="CNX-B12 Office"/>
+      <Device Model="CNX-B12" DeviceId="63" Name="CNX-B12 Mbath"/>
+   </Network>
+   <Network Type="Ethernet" Id="02">
+      <Device Model="DM-MD6x6" DeviceId="03"/>
+      <Device Model="CEN-NSP-1" DeviceId="05"/>
+      <Device Model="CEN-RFGW-EX" DeviceId="0F" Name="CEN-RFGW-EX (Ethernet)">
+         <Network Type="RF">
+            <Device Model="HR-150,HRI-150" DeviceId="56" Name="HR-150"/>
+         </Network>
+      </Device>
+      <Device Model="HDXSPA" DeviceId="16" Name="HD-XSPA"/>
+      <Device Model="Core3 UI XPanel" DeviceId="19" Name="XPanel 2.0 Smart Graphics"/>
+      <Device Model="Core3 UI XPanel" DeviceId="20" Name="XPanel 2.0 Smart Graphics"/>
+      <Device Model="TSW-1050" DeviceId="21"/>
+      <Device Model="TSW-750" DeviceId="22"/>
+      <Device Model="TSW-750" DeviceId="23"/>
+      <Device Model="Crestron_App" DeviceId="24" Name="Crestron App"/>
+      <Device Model="Crestron_App" DeviceId="25" Name="Crestron App"/>
+      <Device Model="Crestron_App" DeviceId="26" Name="Crestron App"/>
+      <Device Model="Crestron_App" DeviceId="27" Name="Crestron App"/>
+   </Network>
+   <Network Type="RF" Id="03">
+      <Device Model="MLX-3" DeviceId="03"/>
+      <Device Model="INET-IOEX-RYIO" DeviceId="04"/>
+      <Device Model="MTX-3" DeviceId="09"/>
+      <Device Model="HR-150,HRI-150" DeviceId="55" Name="HR-150"/>
+   </Network>
+</Device>

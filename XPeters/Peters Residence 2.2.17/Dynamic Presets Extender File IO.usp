@@ -1,0 +1,720 @@
+/*******************************************************************************************
+  Compiler Directives
+*******************************************************************************************/
+#DEFINE_CONSTANT	MAX_MASTER			1000		//Max supported Master edit list entries
+#DEFINE_CONSTANT	MAX_PRESETS			27		//User preset entries
+#DEFINE_CONSTANT	MASTER_SCROLL		9		//Size of Master Edit scrolling list
+#DEFINE_CONSTANT	MAX_NAME_SIZE		15		//Max supported Size of Station Name characters
+#DEFINE_CONSTANT	MAX_CHANNEL_SIZE	6		//Max supported channel character length, including sub channel character formatting
+#DEFINE_CONSTANT	MAX_FILE_CHARS		128		//Max supported characters for Master and User list path and name
+
+//#CATEGORY "0"
+#DEFAULT_VOLATILE
+#ENABLE_STACK_CHECKING
+#ENABLE_TRACE
+
+/*
+#HELP_BEGIN
+   This Simpl+ module is designed to work with the Crestron Dynamic Presets Extender Simpl module
+#HELP_END
+*/
+
+/*******************************************************************************************
+  INPUTS
+*******************************************************************************************/
+DIGITAL_INPUT	_skip_;
+DIGITAL_INPUT Prev_Preset;						//Request to issue previous non 0 channel preset
+DIGITAL_INPUT Next_Preset;						//Request to issue next non 0 channel preset
+DIGITAL_INPUT Edit_Presets;						//Request to enter preset edit mode
+DIGITAL_INPUT First_Master_Page;				//Request to scroll to the beginning of the Master edit list
+DIGITAL_INPUT Prev_Master_Page;					//Request to scroll to the previous Master edit list page
+DIGITAL_INPUT Next_Master_Page;					//Request to scroll to the next Master edit list page
+DIGITAL_INPUT Last_Master_Page;					//Request to scroll to the End of the Master edit list
+DIGITAL_INPUT Edit_Prev_Preset;					//Request to save working summary and edit the previous preset
+DIGITAL_INPUT Edit_Next_Preset;					//Request to save working summary and edit the next preset
+DIGITAL_INPUT Save_Station_Name;				//Request to Save the custom Station Name passed in from "Edit_Station_Name" to the current working preset
+DIGITAL_INPUT Clear_Image;						//Request to Clear the current image from the current working preset
+
+ANALOG_INPUT Master_List_Index;					//Value from 1 to "MASTER_SCROLL" used to select the corresponding station Image and Name from the Master list
+ANALOG_INPUT Max_Channel_Length;				//Max Length of Channel for this instance
+
+STRING_INPUT Edit_Station_Name[MAX_NAME_SIZE];	//Used to pass a custom name for the current working preset
+STRING_INPUT User_File_Name[MAX_FILE_CHARS];	//Name and location of the User presets file
+STRING_INPUT Master_File_Name[MAX_FILE_CHARS];	//Name and location of the Master edit list file
+STRING_INPUT New_Channel_Value[MAX_CHANNEL_SIZE];
+
+/*******************************************************************************************
+  OUTPUTS
+*******************************************************************************************/
+DIGITAL_OUTPUT	_skip_;
+DIGITAL_OUTPUT Clear_Keypad;					//Clears the keypad display when high
+
+ANALOG_OUTPUT User_Index;						//The current selected User preset
+
+STRING_OUTPUT Working_Preset_Index;				//Character interpretation of the current selected user preset, "User_Index"
+STRING_OUTPUT Working_Preset_Station;			//Character string of the current working station name, to be saved to the current selected User preset
+ANALOG_OUTPUT Working_Preset_Image;				//Index value for the image within the corresponding animation, to be saved to the current selected User preset
+STRING_OUTPUT Working_Preset_Channel;			//Character string of the channel value to be saved to the current selected User preset
+
+ANALOG_OUTPUT Scroll_Bar;						//Indicates the current position of the Master edit scrolling list
+
+ANALOG_OUTPUT User_Icon[MAX_PRESETS];			//Index value for image within the corresponding animation, of the specified User preset
+STRING_OUTPUT User_Channel[MAX_PRESETS];		//Charater representation of the channel value of the specified User preset
+STRING_OUTPUT User_Station[MAX_PRESETS];		//Character Name of the specified User preset
+
+ANALOG_OUTPUT Master_Icon_Index[MASTER_SCROLL];	//Index value for the image within the corresponding animation, of the specified Master edit list scrolling page item
+STRING_OUTPUT Master_Station[MASTER_SCROLL];	//Character Name of the specified Master edit list scrolling page item
+
+
+
+/*******************************************************************************************
+  Global Variables
+  (Uncomment and declare global variables as needed)
+  Note:  Be sure to initialize all declared STRING variables as needed
+         For example, in Function Main: myString = "";
+*******************************************************************************************/
+INTEGER CurrentMasterPage;							//Current Page of the Master edit scrolling list
+INTEGER TotalMasterPAGES;							//Total Pages of the Master edit scrolling list
+INTEGER	MasterListPrepd;							//Prevents repeated read and prep of Master lilst
+INTEGER WritingToDisk;								//Prevents repeated write of User List before previous write comeplete. Used to display err to console
+INTEGER Service;									//While servicing prevent commands from cueing
+
+//for User Presets
+INTEGER	UserIcon[MAX_PRESETS];						//User presets Image index value storage
+STRING	UserStation[MAX_PRESETS][MAX_NAME_SIZE];	//User presets Name string storage
+STRING	UserChannel[MAX_PRESETS][MAX_CHANNEL_SIZE];	//User presets Channel value storage
+
+//for Master List
+INTEGER MasterEntries;									//Master edit list entries read
+INTEGER MasterIcon[MAX_MASTER];							//Master edit list Image storage
+STRING	MasterStation[MAX_MASTER][MAX_NAME_SIZE];		//Master edit list Name storage
+STRING	MasterChannel[MAX_MASTER][MAX_CHANNEL_SIZE];	//Default channel values
+INTEGER ScrollIndex;									//Used to calculate Master edit list "Scroll_Bar" position
+
+//for Setting Presets
+STRING	WorkingPresetIndex$[2];						//Used to construct "Working_Preset_Index" string
+STRING	WorkingPresetStation$[MAX_NAME_SIZE];		//Used to construct "Working_Preset_Station string
+STRING	WorkingPresetChannel$[MAX_CHANNEL_SIZE];	//Used to construct "Working_Preset_Channel string
+INTEGER	WorkingPresetImage;							//Used to calculate "Working_Preset_Image" value
+INTEGER UseCustomName;								//Overrides use of default Name from Master edit list, to save with current selected User preset
+INTEGER ForceImageClear;							//Overrides use of default Image from Master edit list, to save with current selected User preset
+
+/*******************************************************************************************
+  Functions
+******************************************************************************************/
+
+/*******************************************************************************************
+	SortMaster
+Sorts in binary order, the entries read from "ReadMasterFile"
+******************************************************************************************/
+Function SortMaster()
+{
+	INTEGER TempCount;
+	INTEGER X;
+	STRING TempSwap$[MAX_NAME_SIZE];
+	STRING TempChannelSwap$[MAX_CHANNEL_SIZE];
+	INTEGER TempSwap;
+    INTEGER bSwapped;
+
+
+ 	// Don't sort if TempCount will be less than 2, otherwise the loop
+    // will go backwards.  MasterEntries can also be zero, so we don't
+    // want TempCount to be negative.
+	if (MasterEntries > 2)
+	{
+    	TempCount = MasterEntries - 1;
+
+	    bSwapped = 1;
+	    while(bSwapped = 1)
+		{
+			bSwapped = 0;
+			for (X = 2 to TempCount)
+			{
+	    		if(UPPER(MasterStation[X]) > UPPER(MasterStation[X + 1]))
+				{
+					TempSwap$ = MasterStation[X];
+					MasterStation[X] = MasterStation[X + 1];
+					MasterStation[X + 1] = TempSwap$;
+
+					TempSwap = MasterIcon[X];
+					MasterIcon[X] = MasterIcon[X + 1];
+					MasterIcon[X + 1] = TempSwap;
+
+					TempChannelSwap$ = MasterChannel[X];
+					MasterChannel[X] = MasterChannel[X + 1];
+					MasterChannel[X + 1] = TempChannelSwap$;
+
+					bSwapped = 1;
+				}
+			}
+
+			TempCount = TempCount - 1;
+		}
+	}
+}
+
+/*******************************************************************************************
+	ReadMasterFile
+Call to Read the Master edit list data from disk.
+Return value indicates Success or Failure of operation.
+******************************************************************************************/
+INTEGER_Function ReadMasterFile()
+{
+	SIGNED_INTEGER File;
+	SIGNED_INTEGER BYTESRead;
+	INTEGER ReadPass;
+	STRING Read$[64];
+	STRING Read$Buff[128];
+	STRING Temp$[128];
+	STRING Temp$2[128];
+	INTEGER Length;
+	INTEGER X;
+	INTEGER Y;
+	INTEGER CommaPos;
+
+	X = 1;
+	ReadPass = 0;
+	MasterEntries = 0;
+
+	if (startfileoperations() = 0)							//success
+	{
+		temp$ = Master_File_Name;
+		File = FileOpen(Master_File_Name,_O_RDONLY | _O_TEXT);
+		if(File >= 0)										//open success
+		{
+			MasterStation[X] = "";
+			MasterIcon[X]	= 1;
+
+			Read$Buff	= "";
+			Read$		= "";
+			While ((FileEOF(File) = 0) & (X <= MAX_MASTER))
+			{
+				BYTESRead = FileRead(File, Read$, 64);
+				Read$Buff = Read$Buff + Read$;
+				if(BYTESRead >= 0)
+				{
+					while((find("\x0D\x0A", Read$Buff) > 0) & (X < MAX_MASTER))
+					{
+						X = X + 1;
+
+						// Read the line
+						Temp$	= remove("\x0D\x0A", Read$Buff);
+
+						// Find first comma
+						CommaPos = find(",", Temp$);
+
+						// Get the station name
+						MasterStation[X] = left(Temp$, min(CommaPos - 1, MAX_NAME_SIZE));
+                        Temp$ = right(Temp$, Len(Temp$) - CommaPos);
+
+                        // Find the second comma
+						CommaPos = find(",", Temp$);
+
+						// Get the icon index
+						Temp$2 = left(Temp$, CommaPos - 1);
+						MasterIcon[X] = atoi(Temp$2);
+
+						// Get the default channel
+                        Temp$2 = right(Temp$, Len(Temp$) - CommaPos);
+						MasterChannel[X] = left(Temp$2, min(Len(Temp$2) - 2, MAX_CHANNEL_SIZE));
+					}
+				}
+			}
+			MasterEntries = X-1;							//reduce one more for proper count
+
+			if (MasterEntries < MAX_MASTER)					//ini any remaining reserved memory
+			{
+				Y = MasterEntries MOD MASTER_SCROLL;
+				if (Y <> 0)
+				{
+					Y = MASTER_SCROLL - Y;
+					while(Y > 0)
+					{
+						X = X + 1;
+						MasterStation[X]	= "";
+						MasterIcon[X]		= 1;
+						MasterChannel[X]	= "";
+						Y = Y - 1;
+					}
+				}
+			}
+			Print ("Dynamic Presets Master File Read: %d stations found.\n", MasterEntries);			//Dbug
+			ReadPass = 1;
+			FileClose(File);
+	    }
+		EndFileOperations();
+	}
+
+	call SortMaster();
+
+	TotalMasterPAGES	= (MasterEntries/MASTER_SCROLL) + 1;
+	CurrentMasterPage	= 1;
+	Print ("Total Dynamic Preset Master List Pages: %d, Current Page: %d \n", TotalMasterPAGES, CurrentMasterPage);	//Dbug
+
+	if (TotalMasterPAGES > 1)	// Don't divide by zero!  If there's only one page the scroll bar should just be at zero.
+		ScrollIndex = 65535/(TotalMasterPAGES-1);
+	else
+		ScrollIndex = 0;
+
+	Return(ReadPass);
+}
+
+/*******************************************************************************************
+	InitialUserFile
+Call to initialize the User presets data file.
+Return value indicates Success or Failure of operation.
+******************************************************************************************/
+Integer_Function InitialUserFile()
+{
+	SIGNED_INTEGER File;
+	STRING Write$[24];
+	INTEGER X;
+	INTEGER Y;
+	STRING Z[MAX_CHANNEL_SIZE];
+	INTEGER WritePass;
+	STRING	temp$[128];
+
+	WritePass = 0;
+
+	if (startfileoperations() = 0)
+	{
+		temp$ = User_File_Name;
+		File = FileOpen(Temp$,_O_WRONLY | _O_CREAT | _O_TRUNC | _O_TEXT);
+		if	(File >= 0)										//success
+		{
+			Y = 1;	//initial image index	'Place holder'
+			Z = "";	//initial channel
+			for (X = 1 to MAX_PRESETS)
+			{
+				Makestring(Write$, "%d:PRE %02d:%d:%s\n", X,X,Y,Z);
+				Filewrite(File, Write$, len(Write$));
+			}
+			WritePass = 1;
+		    FileClose(File);
+		}
+		EndFileOperations();
+	}
+	Return(WritePass);
+}
+
+/*******************************************************************************************
+	WriteUserFile
+Call to Write Summary preset information to disk.
+******************************************************************************************/
+Integer_Function WriteUserFile(INTEGER MasterListIndex)
+{
+	SIGNED_INTEGER File;
+	INTEGER X;
+	INTEGER WritePass;
+	STRING	Write$[24];
+	STRING	temp$[128];
+
+	if (WritingToDisk = 0)
+	{
+		WritingToDisk = 1;
+		if (startfileoperations() = 0)
+		{
+			temp$ = User_File_Name;
+			File = FileOpen(Temp$,_O_WRONLY | _O_TEXT);
+			if (File >= 0)										//open success
+			{
+				if (MasterListIndex > 0)
+				{
+					X = (((CurrentMasterPage-1)*MASTER_SCROLL)+MasterListIndex);
+					if ((X <= MasterEntries) & (X <= MAX_MASTER))
+					{
+						UserIcon[User_Index]	= MasterIcon[X+1];				//offset by one to bypass transparent image (and button graphic)
+						UserStation[User_Index]	= MasterStation[X+1];
+					}
+				}
+
+				UserChannel[User_Index]	= WorkingPresetChannel$;
+
+				if (UseCustomName = 1)
+				{
+					UserStation[User_Index] = WorkingPresetStation$;
+					UseCustomName = 0;
+				}
+				if  (ForceImageClear = 1)
+				{
+					UserIcon[User_Index] = WorkingPresetImage;
+					ForceImageClear = 0;
+				}
+
+				for (X = 1 to MAX_PRESETS)
+				{
+					Write$ = itoa(X) + ":" + UserStation[X] + ":" + itoa(UserIcon[X]) + ":" + UserChannel[X] + "\n";
+					Filewrite(File, Write$, len(Write$));
+
+					if(UserIcon[X] = 1)	//populate outputs
+						User_Station[X]	= UserStation[X];
+					else
+						User_Station[X]	= "";
+					User_Icon[X]	= UserIcon[X];
+					User_Channel[X]	= UserChannel[X];
+				}
+				WritePass = 1;
+				FileClose(File);
+			}
+			endfileoperations();
+		}
+		WritingToDisk = 0;
+	}
+	Else	WritePass = 0;
+
+	Return(WritePass);
+}
+
+/*******************************************************************************************
+	ReadUserFile
+Call to Read the User presets data from disk.
+Return value indicates Success or Failure or operation.
+******************************************************************************************/
+INTEGER_Function ReadUserFile()
+{
+	SIGNED_INTEGER File;
+	SIGNED_INTEGER BYTESRead;
+	INTEGER	ReadPass;
+	STRING	Read$[64];
+	STRING	Read$Buff[128];
+	STRING	Temp$[128];
+	INTEGER	X;
+	INTEGER i;
+	INTEGER ColonPos;
+
+	X = 0;
+	ReadPass = 0;
+
+	if (startfileoperations() = 0)
+	{
+		if (SetCurrentDirectory("\\NVRAM") = 0)			//set success
+		{
+			File = FileOpen(User_File_Name,_O_RDONLY | _O_TEXT);
+			if(File >= 0)								//open success
+			{
+				Read$Buff	= "";
+				Read$		= "";
+				While(FileEOF(File) = 0)
+				{
+					BYTESRead = FileRead(File, Read$, 64);
+					Read$Buff = Read$Buff + Read$;
+					if(BYTESRead >= 0)
+					{
+						while(find("\x0D\x0A", Read$Buff) > 0)
+						{
+							X = X + 1;
+
+							// Read the line
+							Temp$	= remove("\x0D\x0A", Read$Buff);
+
+							// Find first comma
+							ColonPos = find(":", Temp$);
+
+							// Get the preset index out of the way
+	                        Temp$ = right(Temp$, Len(Temp$) - ColonPos);
+
+	                        // Find the second comma
+							ColonPos = find(":", Temp$);
+
+							// Get the station name
+							UserStation[X] = left(Temp$, ColonPos - 1);
+							//User_Station[X]	= UserStation[X];
+							Temp$ = right(Temp$, Len(Temp$) - ColonPos);
+
+							// Find the third comma
+							ColonPos = find(":", Temp$);
+
+							// Get the icon index
+							UserIcon[X]	= atoi(left(Temp$, ColonPos - 1));
+							User_Icon[X] = UserIcon[X];
+
+							if(UserIcon[X] = 1)	//populate outputs
+								User_Station[X]	= UserStation[X];
+							else
+								User_Station[X]	= "";
+
+
+							// Get the preset channel
+	                        UserChannel[X] = right(Temp$, Len(Temp$) - ColonPos);
+							UserChannel[X] =  left(UserChannel[X], min(Len(UserChannel[X]) - 2, MAX_CHANNEL_SIZE));
+							User_Channel[X]	= UserChannel[X];
+	                	}
+					}
+				}
+				Print ("Dynamic Presets User File Read: %d Stations.\n", X);			//Dbug
+				FileClose(File);
+				ReadPass = 1;
+			}
+		}
+		EndFileOperations();
+	}
+	Return(ReadPass);
+}
+
+/*******************************************************************************************
+	PopMasterList
+Call to populate the current Master edit list scrolling page.
+******************************************************************************************/
+Function PopMasterList()
+{
+	INTEGER X;
+	INTEGER i;
+
+	X = (((CurrentMasterPage - 1) * MASTER_SCROLL) + 1);				//Offset by one to eliminate the 'clear' master image
+	for (i = 1 to MASTER_SCROLL)
+	{
+		if (X < MAX_MASTER)
+		{
+			X = X + 1;
+			Master_Station[i]		= MasterStation[X];
+			Master_Icon_Index[i]	= MasterIcon[X];
+		}
+		else
+		{
+			Master_Station[i]		= "";
+			Master_Icon_Index[i]	= 1;
+		}
+	}
+}
+
+/*******************************************************************************************
+	PopCurrentPreset
+Call to Populate the current working Preset Summary memory, with the currently selected User preset data.
+******************************************************************************************/
+Function PopCurrentPreset()
+{
+	WorkingPresetIndex$		= itoa(User_Index);
+	WorkingPresetStation$	= UserStation[User_Index];
+	WorkingPresetImage		= UserIcon[User_Index];
+
+    // User file is initialized with 0 for the icon index (so it gets the blank button image),
+	// but when they edit the preset we don't want it to be transparent.
+	if (WorkingPresetImage = 0)
+		WorkingPresetImage = 1;
+
+	Working_Preset_Channel	= UserChannel[User_Index];
+	WorkingPresetChannel$ 	= UserChannel[User_Index];
+}
+
+/*******************************************************************************************
+	PopWorkingPreset
+Call to output the current working preset summary and save remaining data to disk.
+******************************************************************************************/
+Function PopWorkingPreset()
+{
+	Working_Preset_Index	= WorkingPresetIndex$;
+	Working_Preset_Image	= WorkingPresetImage;
+	Working_Preset_Station	= WorkingPresetStation$;
+	Working_Preset_Channel	= WorkingPresetChannel$;
+}
+
+/*******************************************************************************************
+  Event Handlers
+*******************************************************************************************/
+PUSH Next_Preset
+{
+	INTEGER X;
+	INTEGER Y;
+	X = User_Index;
+	Y = 0;
+
+	DO
+	{
+		if (X >= MAX_PRESETS) X = 1;
+		else X = X + 1;
+		Y = Y + 1;										//check each preset for 'empty' channel only once
+	}
+	UNTIL ((UserChannel[X] <> "") | (Y = MAX_PRESETS));
+	User_Index	= X;
+}
+
+PUSH Prev_Preset
+{
+	INTEGER X;
+	INTEGER Y;
+	X = User_Index;
+	Y = 0;
+
+	DO
+	{
+		if (X <= 1) X = MAX_PRESETS;
+		else X = X - 1;
+		Y = Y + 1;										//check each preset for 'empty' channel only once
+	}
+	UNTIL ((UserChannel[X] <> "") | (Y = MAX_PRESETS));
+	User_Index	= X;
+}
+
+PUSH Edit_Prev_Preset
+{
+	if (Service = 0)
+	{
+		Service = 1;
+
+		Call WriteUserFile(Master_List_Index);
+
+		if (User_Index = 1) User_Index = MAX_PRESETS;
+		else User_Index	= User_Index - 1;
+
+		Call PopCurrentPreset();
+		Call PopWorkingPreset();
+		if (WriteUserFile(Master_List_Index) = 0)
+			PRINT ("Attempt to change working preset before last preset finished saving.\nCurrent selection could not be saved.\n");
+
+		Service = 0;
+	}
+}
+
+PUSH Edit_Next_Preset
+{
+	if (Service = 0)
+	{
+		Service = 1;
+
+		Call WriteUserFile(Master_List_Index);
+
+		if (User_Index = MAX_PRESETS) User_Index	= 1;
+		else User_Index	= User_Index + 1;
+
+		Call PopCurrentPreset();
+		Call PopWorkingPreset();
+		if (WriteUserFile(Master_List_Index) = 0)
+			PRINT ("Attempt to change working preset before last preset finished saving.\nCurrent selection could not be saved.\n");
+		Service = 0;
+	}
+}
+
+CHANGE New_Channel_Value
+{
+	WorkingPresetChannel$ = New_Channel_Value;
+	if (WriteUserFile(Master_List_Index) = 0)
+		PRINT ("Attempt to change working preset before last preset finished saving.\nCurrent selection could not be saved.\n");
+}
+
+PUSH Save_Station_Name
+{
+	WorkingPresetStation$ = Edit_Station_Name;
+	UseCustomName = 1;
+	Call PopWorkingPreset();
+	if (WriteUserFile(Master_List_Index) = 0)
+		PRINT ("Attempt to change working preset before last preset finished saving.\nCurrent selection could not be saved.\n");
+}
+
+PUSH Clear_Image
+{
+	WorkingPresetImage = 1;									//transparent image indexed @ 1
+	ForceImageClear = 1;
+	Call PopWorkingPreset();
+	if (WriteUserFile(Master_List_Index) = 0)
+		PRINT ("Attempt to change working preset before last preset finished saving.\nCurrent selection could not be saved.\n");
+}
+
+CHANGE Master_List_Index
+{
+	INTEGER X;
+	INTEGER MasterListIndex;
+
+	MasterListIndex = Master_List_Index;		//ensure this value doesnt change before write complete
+
+	if (MasterListIndex = 0) Return;
+
+	ForceImageClear = 0;
+
+	X = (((CurrentMasterPage - 1) * MASTER_SCROLL) + MasterListIndex);
+	if ((X <= MasterEntries) & (X <= MAX_MASTER))
+	{
+		Clear_Keypad = 1;
+		Clear_Keypad = 0;
+
+		X = X+1;										  //+1 to offset both button image and transparent image in animation
+		WorkingPresetImage		= MasterIcon[X];
+		WorkingPresetStation$	= MasterStation[X];
+
+		if (len(MasterChannel[X])	<> 0)
+			WorkingPresetChannel$	= MasterChannel[X];
+
+		Call PopWorkingPreset();
+
+		Call WriteUserFile(Master_List_Index);
+	}
+}
+
+PUSH Edit_Presets
+{
+	Call PopCurrentPreset();
+	Call PopWorkingPreset();
+	Call WriteUserFile(Master_List_Index);
+
+	if (MasterListPrepd = 0)
+	{
+		if (ReadMasterFile() = 0)
+		{
+			GenerateUserError("Problem accessing Dynamic Preset Master List file.\nPlease check the file exists, and NVRAM is enabled.\n");
+			Return;
+		}
+		MasterListPrepd = 1;
+    }
+    call PopMasterList();
+	Scroll_Bar = ScrollIndex*(TotalMasterPAGES-CurrentMasterPage);
+}
+
+PUSH Next_Master_Page
+{
+	if (CurrentMasterPage < TotalMasterPAGES)
+	{
+		CurrentMasterPage = CurrentMasterPage + 1;
+		call PopMasterList();
+		Scroll_Bar = ScrollIndex*(TotalMasterPAGES-CurrentMasterPage);
+	}
+}
+
+PUSH Prev_Master_Page
+{
+	if (CurrentMasterPage > 1)
+	{
+		CurrentMasterPage = CurrentMasterPage - 1;
+		call PopMasterList();
+		Scroll_Bar = ScrollIndex*(TotalMasterPAGES-CurrentMasterPage);
+	}
+}
+
+PUSH First_Master_Page
+{
+	CurrentMasterPage = 1;
+	call PopMasterList();
+	Scroll_Bar = ScrollIndex*(TotalMasterPAGES-CurrentMasterPage);
+}
+
+PUSH Last_Master_Page
+{
+	CurrentMasterPage = TotalMasterPAGES;
+	call PopMasterList();
+	Scroll_Bar = ScrollIndex*(TotalMasterPAGES-CurrentMasterPage);
+}
+
+/*******************************************************************************************
+  Main()
+  (This code will get called when the system starts up)
+*******************************************************************************************/
+Function Main()
+{
+	Integer temp;
+
+	MasterListPrepd = 0;
+	UseCustomName = 0;
+
+	waitforinitializationcomplete();
+
+	if (ReadUserFile() = 0)						//if read fails, attempt to create
+	{
+		temp = InitialUserFile();
+		if (temp = 0)	GenerateUserError("Could not create Dynamic Presets User List file.\nPlease check NVRAM is enabled and not full.\n");
+
+		temp = ReadUserFile();
+		if (temp = 0)	GenerateUserError("Could not create Dynamic Presets User List file.\nPlease check NVRAM is enabled and not full.\n");
+	}
+	WritingToDisk = 0;
+	Service = 0;
+
+	processlogic();
+}
